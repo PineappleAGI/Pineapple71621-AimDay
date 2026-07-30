@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AimDay</title>
+  <style>
+    :root {
+      --ink: #142428;
+      --soft: #3a4f55;
+      --teal: #1a3a40;
+      --sun: #e8a858;
+      --sun-deep: #c47a2a;
+      --line: rgba(20, 36, 40, 0.12);
+      --font: "Outfit", system-ui, sans-serif;
+      --display: "Fraunces", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 320px;
+      font-family: var(--font);
+      color: var(--ink);
+      background: linear-gradient(165deg, #d7e4e8, #f3f1eb);
+      padding: 0.9rem 0.95rem 1rem;
+    }
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      margin: 0.2rem 0 0.75rem;
+      font-size: 0.78rem;
+      color: var(--soft);
+    }
+    .next-box {
+      background: linear-gradient(120deg, rgba(232, 168, 88, 0.28), rgba(47, 106, 110, 0.1));
+      border: 1px solid rgba(196, 122, 42, 0.25);
+      border-radius: 12px;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.7rem;
+    }
+    .next-box strong {
+      display: block;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sun-deep);
+      margin-bottom: 0.2rem;
+    }
+    .next-box p {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    textarea {
+      width: 100%;
+      min-height: 72px;
+      font: inherit;
+      font-size: 0.86rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.55rem 0.65rem;
+      background: rgba(255,255,255,0.7);
+      resize: vertical;
+      color: var(--ink);
+    }
+    .actions { display: flex; gap: 0.4rem; margin-top: 0.65rem; }
+    button {
+      flex: 1;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.82rem;
+      border: none;
+      border-radius: 999px;
+      padding: 0.55rem 0.7rem;
+      cursor: pointer;
+      background: var(--teal);
+      color: #f7f4ee;
+    }
+    button.ghost {
+      background: transparent;
+      color: var(--soft);
+      border: 1px solid var(--line);
+    }
+    .empty { font-size: 0.85rem; color: var(--soft); margin: 0 0 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>AimDay</h1>
+  <p class="sub" id="sub">Map your thoughts</p>
+  <div class="next-box" id="nextBox" hidden>
+    <strong>Next step</strong>
+    <p id="nextText"></p>
+  </div>
+  <p class="empty" id="empty" hidden>No map yet — capture a thought.</p>
+  <textarea id="quick" placeholder="Quick thought…" maxlength="500"></textarea>
+  <div class="actions">
+    <button type="button" class="ghost" id="openFull">Open map</button>
+    <button type="button" id="addThought">Add & map</button>
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

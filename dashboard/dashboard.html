@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AimDay</title>
+  <link rel="stylesheet" href="../fonts/fonts.css" />
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="sky" aria-hidden="true"></div>
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <h1>AimDay</h1>
+    </div>
+    <p class="date-line" id="dateLine"></p>
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <div class="progress-bar"><span id="progressFill"></span></div>
+      <span class="progress-label" id="progressLabel"></span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Capture -->
+    <section class="panel hero-panel" id="panel-capture" data-panel="capture">
+      <header class="panel-head">
+        <h2>What’s on your mind?</h2>
+        <p>Dump it messy. AimDay turns it into a map — what you want, and what to do next.</p>
+      </header>
+
+      <form id="thoughtForm" class="thought-form">
+        <label class="thought-field">
+          <span class="field-label">Your thoughts</span>
+          <textarea
+            name="thoughts"
+            id="thoughts"
+            rows="10"
+            placeholder="I want to finish the proposal&#10;need to pull the numbers from last quarter&#10;also stuck waiting on Alex’s feedback&#10;call the dentist&#10;ship a rough draft today…"
+            required
+          ></textarea>
+        </label>
+        <button type="submit" class="btn primary big" id="mapBtn">Map my thoughts</button>
+      </form>
+    </section>
+
+    <!-- Map -->
+    <section class="map-stage" id="panel-map" data-panel="map" hidden>
+      <aside class="next-rail" id="nextRail">
+        <p class="next-kicker">Next step</p>
+        <h2 id="nextTitle">—</h2>
+        <p class="next-hint" id="nextHint">The clearest move from your map.</p>
+        <div class="next-actions">
+          <button type="button" class="btn primary" id="markDone">Mark done</button>
+          <button type="button" class="btn ghost" id="focusNode">Show on map</button>
+        </div>
+        <div class="map-meta">
+          <button type="button" class="btn ghost" id="remap">Edit thoughts</button>
+          <button type="button" class="btn ghost" id="resetDay">Clear</button>
+        </div>
+      </aside>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas-tools">
+          <button type="button" class="tool" id="zoomOut" title="Zoom out">−</button>
+          <button type="button" class="tool" id="zoomReset" title="Reset view">⊙</button>
+          <button type="button" class="tool" id="zoomIn" title="Zoom in">+</button>
+        </div>
+        <svg id="mindmap" class="mindmap" role="img" aria-label="Thought mindmap"></svg>
+        <p class="canvas-hint">Drag to pan · scroll to zoom · click a node to focus</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <label class="toggle">
+      <input type="checkbox" id="openOnStartup" />
+      Open AimDay when Chrome starts
+    </label>
+    <span class="quiet">Stored only on this device</span>
+  </footer>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>
