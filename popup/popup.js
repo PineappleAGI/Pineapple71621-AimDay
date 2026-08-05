@@ -1,11 +1,10 @@
-import { getDay, saveDay, dateKey } from "../shared/storage.js";
-import { thoughtsToMap, getNode, progress } from "../shared/parse.js";
+import { getDay, dateKey, todayStorageKey } from "../shared/storage.js";
+import { getNode, progress } from "../shared/parse.js";
 
 const nextBox = document.getElementById("nextBox");
 const nextText = document.getElementById("nextText");
 const sub = document.getElementById("sub");
 const empty = document.getElementById("empty");
-const quick = document.getElementById("quick");
 
 let day = null;
 
@@ -17,30 +16,23 @@ async function init() {
     chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html") });
   });
 
-  document.getElementById("addThought").addEventListener("click", onAdd);
-  quick.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onAdd();
+  document.getElementById("openPanel").addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "open-side-panel" });
+    window.close();
   });
-}
 
-async function onAdd() {
-  const bit = quick.value.trim();
-  if (!bit) {
-    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html?focus=capture") });
-    return;
-  }
-  const merged = day.thoughts ? `${day.thoughts.trim()}\n${bit}` : bit;
-  day.thoughts = merged;
-  day.map = thoughtsToMap(merged);
-  day.mapped = day.map.nodes.length > 0;
-  day = await saveDay(day);
-  quick.value = "";
-  render();
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes[todayStorageKey()]) return;
+    const next = changes[todayStorageKey()].newValue;
+    if (!next) return;
+    day = next;
+    render();
+  });
 }
 
 function render() {
   const { done, total } = progress(day.map);
-  sub.textContent = total ? `${done}/${total} moves done · today` : "Dump thoughts → see the map";
+  sub.textContent = total ? `${done}/${total} moves done · today` : "Open the side panel to capture";
 
   const next = getNode(day.map, day.map?.nextStepId);
   if (next) {

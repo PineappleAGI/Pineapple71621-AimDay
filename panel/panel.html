@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AimDay</title>
+  <link rel="stylesheet" href="../fonts/fonts.css" />
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <h1>AimDay</h1>
+    </div>
+    <p class="sub" id="sub">Dump thoughts → see the map</p>
+  </header>
+
+  <section class="next-card" id="nextBox" hidden>
+    <p class="kicker">Current focus</p>
+    <h2 id="nextText"></h2>
+    <p class="hint" id="nextHint">Clearest next action</p>
+    <div class="row">
+      <button type="button" class="btn primary" id="markDone">Mark done</button>
+      <button type="button" class="btn ghost" id="openMap">Open map</button>
+    </div>
+  </section>
+
+  <p class="empty" id="empty" hidden>No map yet — capture a thought below.</p>
+
+  <label class="field">
+    <span class="field-label">Quick capture</span>
+    <textarea id="quick" placeholder="One thought per line…" maxlength="500"></textarea>
+  </label>
+
+  <div class="actions">
+    <button type="button" class="btn ghost" id="openCapture">Full dump</button>
+    <button type="button" class="btn primary" id="addThought">Add & map</button>
+  </div>
+
+  <p class="hint-keys">⌘/Ctrl+Enter to add</p>
+
+  <script type="module" src="panel.js"></script>
+</body>
+</html>

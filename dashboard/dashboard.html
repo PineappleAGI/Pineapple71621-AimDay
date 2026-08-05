@@ -8,17 +8,19 @@
   <link rel="stylesheet" href="dashboard.css" />
 </head>
 <body>
-  <div class="sky" aria-hidden="true"></div>
-
-  <header class="top">
+  <header class="topbar">
     <div class="brand">
       <span class="mark" aria-hidden="true"></span>
       <h1>AimDay</h1>
     </div>
-    <p class="date-line" id="dateLine"></p>
-    <div class="progress-wrap" id="progressWrap" hidden>
-      <div class="progress-bar"><span id="progressFill"></span></div>
-      <span class="progress-label" id="progressLabel"></span>
+    <div class="pills" aria-live="polite">
+      <span class="pill" id="datePill">Today</span>
+      <span class="pill" id="statusPill">Ready</span>
+      <span class="pill accent" id="progressPill" hidden>0/0</span>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="btn ghost compact" id="toggleFocus" hidden title="Focus path (F)">Focus</button>
+      <button type="button" class="btn primary compact" id="topPrimary" hidden>Mark done</button>
     </div>
   </header>
 
@@ -47,37 +49,101 @@
 
     <!-- Map -->
     <section class="map-stage" id="panel-map" data-panel="map" hidden>
-      <aside class="next-rail" id="nextRail">
-        <p class="next-kicker">Next step</p>
+      <aside class="focus-rail" id="nextRail">
+        <p class="next-kicker">Current focus</p>
         <h2 id="nextTitle">—</h2>
         <p class="next-hint" id="nextHint">The clearest move from your map.</p>
+
+        <div class="meters" id="meters" hidden>
+          <div class="meter">
+            <span class="meter-label">Actions</span>
+            <div class="meter-bar"><span id="meterActions"></span></div>
+          </div>
+          <div class="meter">
+            <span class="meter-label">Blockers</span>
+            <div class="meter-bar blocker"><span id="meterBlockers"></span></div>
+          </div>
+          <div class="meter">
+            <span class="meter-label">Wants</span>
+            <div class="meter-bar goal"><span id="meterGoals"></span></div>
+          </div>
+        </div>
+
+        <div class="decision-box">
+          <p class="decision-kicker">Decision</p>
+          <p id="decisionText">Pick a node or mark the next step done.</p>
+        </div>
+
         <div class="next-actions">
           <button type="button" class="btn primary" id="markDone">Mark done</button>
           <button type="button" class="btn ghost" id="focusNode">Show on map</button>
+          <button type="button" class="btn ghost" id="pinNext">Pin as next</button>
         </div>
+
+        <div class="edit-box" id="editBox" hidden>
+          <p class="decision-kicker">Edit node</p>
+          <label class="mini-field">
+            <span>Label</span>
+            <input type="text" id="editLabel" maxlength="160" />
+          </label>
+          <label class="mini-field">
+            <span>Type</span>
+            <select id="editType">
+              <option value="goal">Want</option>
+              <option value="theme">Theme</option>
+              <option value="action">Do</option>
+              <option value="blocker">Blocker</option>
+              <option value="note">Note</option>
+            </select>
+          </label>
+          <label class="mini-field">
+            <span>Parent</span>
+            <select id="editParent"></select>
+          </label>
+          <button type="button" class="btn ghost" id="applyEdit">Save edits</button>
+        </div>
+
         <div class="map-meta">
           <button type="button" class="btn ghost" id="remap">Edit thoughts</button>
+          <button type="button" class="btn ghost" id="toggleReview">Review types</button>
           <button type="button" class="btn ghost" id="resetDay">Clear</button>
         </div>
       </aside>
 
-      <div class="canvas-wrap" id="canvasWrap">
-        <div class="canvas-tools">
-          <button type="button" class="tool" id="zoomOut" title="Zoom out">−</button>
-          <button type="button" class="tool" id="zoomReset" title="Reset view">⊙</button>
-          <button type="button" class="tool" id="zoomIn" title="Zoom in">+</button>
+      <div class="canvas-column">
+        <div class="review-strip" id="reviewStrip" hidden>
+          <div class="review-head">
+            <p class="decision-kicker">Classification review</p>
+            <button type="button" class="btn ghost compact" id="closeReview">Done</button>
+          </div>
+          <div class="review-list" id="reviewList"></div>
         </div>
-        <svg id="mindmap" class="mindmap" role="img" aria-label="Thought mindmap"></svg>
-        <p class="canvas-hint">Drag to pan · scroll to zoom · click a node to focus</p>
+
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="canvas-banner" id="canvasBanner" hidden>Focus path</div>
+          <div class="canvas-tools">
+            <button type="button" class="tool" id="zoomOut" title="Zoom out (−)">−</button>
+            <button type="button" class="tool" id="zoomReset" title="Reset view (0)">⊙</button>
+            <button type="button" class="tool" id="zoomIn" title="Zoom in (+)">+</button>
+          </div>
+          <svg id="mindmap" class="mindmap" role="img" aria-label="Thought mindmap"></svg>
+          <p class="canvas-hint">Drag canvas to pan · drag a box onto another to re-link · scroll to zoom · D done · F focus</p>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="foot">
-    <label class="toggle">
-      <input type="checkbox" id="openOnStartup" />
-      Open AimDay when Chrome starts
-    </label>
+    <div class="toggles">
+      <label class="toggle">
+        <input type="checkbox" id="openOnStartup" />
+        Open dashboard when Chrome starts
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="morningNotify" />
+        Morning notification (~8am)
+      </label>
+    </div>
     <span class="quiet">Stored only on this device</span>
   </footer>
 

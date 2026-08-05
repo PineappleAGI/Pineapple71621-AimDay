@@ -26,7 +26,8 @@ export function emptyDay(key = dateKey()) {
 export async function getSettings() {
   const data = await chrome.storage.local.get(SETTINGS_KEY);
   return {
-    openOnStartup: true,
+    openOnStartup: false,
+    morningNotify: true,
     ...(data[SETTINGS_KEY] || {}),
   };
 }
@@ -70,4 +71,8 @@ export async function saveDay(day) {
   return next;
 }
 
-export { dateKey };
+export function todayStorageKey() {
+  return dayStorageKey(dateKey());
+}
+
+export { dateKey, dayStorageKey };

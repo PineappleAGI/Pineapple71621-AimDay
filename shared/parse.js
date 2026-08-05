@@ -258,3 +258,87 @@ export function progress(map) {
   const done = items.filter((n) => n.done).length;
   return { done, total: items.length, pct: Math.round((done / items.length) * 100) };
 }
+
+export function typeCounts(map) {
+  const counts = { goal: 0, theme: 0, action: 0, blocker: 0, note: 0 };
+  for (const n of map?.nodes || []) {
+    if (counts[n.type] != null) counts[n.type] += 1;
+  }
+  return counts;
+}
+
+/** Normalize text for matching nodes across remaps. */
+export function thoughtKey(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Carry done flags, manual types, and next-step choice onto a freshly parsed map.
+ */
+export function mergeMapState(prevMap, nextMap) {
+  if (!nextMap) return nextMap;
+  if (!prevMap?.nodes?.length) return nextMap;
+
+  const prevByKey = new Map();
+  for (const n of prevMap.nodes) {
+    prevByKey.set(thoughtKey(n.full || n.label), n);
+  }
+
+  for (const n of nextMap.nodes) {
+    const prev = prevByKey.get(thoughtKey(n.full || n.label));
+    if (!prev) continue;
+    n.done = !!prev.done;
+    if (prev.manualType) {
+      n.type = prev.manualType;
+      n.manualType = prev.manualType;
+    }
+    if (prev.manualParent && prev.manualParent !== "root") {
+      const parentMatch = nextMap.nodes.find(
+        (p) => thoughtKey(p.full || p.label) === thoughtKey(prev.manualParent)
+      );
+      if (parentMatch) {
+        n.parentId = parentMatch.id;
+        n.manualParent = prev.manualParent;
+      }
+    } else if (prev.manualParent === "root") {
+      n.parentId = nextMap.root.id;
+      n.manualParent = "root";
+    }
+  }
+
+  const prevNext = getNode(prevMap, prevMap.nextStepId);
+  if (prevNext) {
+    const match = nextMap.nodes.find(
+      (n) => thoughtKey(n.full || n.label) === thoughtKey(prevNext.full || prevNext.label) && !n.done
+    );
+    if (match) nextMap.nextStepId = match.id;
+  }
+
+  const current = getNode(nextMap, nextMap.nextStepId);
+  if (!current || current.done) {
+    nextMap.nextStepId = pickNextStep(nextMap.nodes);
+  }
+
+  return nextMap;
+}
+
+/** Ancestor chain from root → target (inclusive). */
+export function pathToNode(map, targetId) {
+  const ids = new Set();
+  if (!map || !targetId) return ids;
+  if (map.root?.id) ids.add(map.root.id);
+  let cur = getNode(map, targetId);
+  while (cur) {
+    ids.add(cur.id);
+    if (!cur.parentId || cur.id === map.root?.id) break;
+    cur = getNode(map, cur.parentId);
+  }
+  return ids;
+}
+
+export function remapThoughts(raw, prevMap) {
+  return mergeMapState(prevMap, thoughtsToMap(raw));
+}
