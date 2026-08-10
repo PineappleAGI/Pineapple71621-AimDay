@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "AimDay",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Dump your thoughts — AimDay maps what you want and highlights your next step.",
-  "permissions": ["storage", "alarms", "sidePanel", "tabs", "windows", "notifications"],
+  "permissions": ["storage", "alarms", "sidePanel", "tabs", "notifications"],
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"

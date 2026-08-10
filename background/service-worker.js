@@ -40,20 +40,6 @@ chrome.notifications.onClicked.addListener(async (id) => {
   await openDashboard(url);
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type === "open-side-panel") {
-    chrome.tabs.query({ active: true, currentWindow: true }).then(async (tabs) => {
-      const tab = tabs[0];
-      if (tab?.windowId != null) {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-      }
-      sendResponse({ ok: true });
-    });
-    return true;
-  }
-  return false;
-});
-
 async function ensureMorningAlarm() {
   await chrome.alarms.create(MORNING_ALARM, {
     when: nextMorningMs(),
