@@ -92,17 +92,9 @@ AimDay can send one notification around 8am asking what today's next step is; cl
 
 ---
 
-## Privacy
-
-Your thoughts stay on your machine. AimDay makes no network requests of any kind — there is no account, no API key, and no server to send anything to. Each day's dump and map are saved in `chrome.storage.local`, keyed by date, and they stay there until you clear the day or remove the extension.
-
----
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-Bundled fonts (Fraunces, Outfit) are licensed under the SIL Open Font License — see [fonts/OFL.txt](fonts/OFL.txt).
 
 ---
 
