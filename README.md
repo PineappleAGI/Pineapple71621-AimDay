@@ -6,6 +6,8 @@ A **Chrome extension** for people whose heads are full and whose days need one c
 
 **No account. No API key. No server.** Your thoughts are parsed on your machine and stay there.
 
+https://github.com/user-attachments/assets/7edf9a1b-1da4-4d85-bba6-985ce9dc4b90
+
 ---
 
 ## Get It From GitHub
