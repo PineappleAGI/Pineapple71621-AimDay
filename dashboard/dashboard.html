@@ -19,7 +19,9 @@
       <span class="pill accent" id="progressPill" hidden>0/0</span>
     </div>
     <div class="top-actions">
-      <button type="button" class="btn ghost compact" id="toggleFocus" hidden title="Focus path (F)">Focus</button>
+      <button type="button" class="btn ghost compact" id="backToDump" hidden>Edit dump</button>
+      <button type="button" class="btn ghost compact" id="openWeek">Week review</button>
+      <button type="button" class="btn ghost compact" id="toggleFocus" hidden title="Show Must tasks (F)">Focus</button>
       <button type="button" class="btn primary compact" id="topPrimary" hidden>Mark done</button>
     </div>
   </header>
@@ -33,16 +35,35 @@
       </header>
 
       <form id="thoughtForm" class="thought-form">
-        <label class="thought-field">
-          <span class="field-label">Your thoughts</span>
-          <textarea
-            name="thoughts"
-            id="thoughts"
-            rows="10"
-            placeholder="I want to finish the proposal&#10;need to pull the numbers from last quarter&#10;also stuck waiting on Alex’s feedback&#10;call the dentist&#10;ship a rough draft today…"
-            required
-          ></textarea>
-        </label>
+        <div class="thought-field">
+          <div class="field-label-row">
+            <span class="field-label" id="thoughtsLabel">Your thoughts</span>
+            <span class="voice-status" id="voiceStatus" aria-live="polite"></span>
+          </div>
+          <div class="dump-wrap">
+            <div class="ghost-dump" id="ghostDump" aria-hidden="true">
+              <span>I want to finish the proposal</span>
+              <span>be in office today 8:30AM</span>
+              <span>morning check-in 8AM</span>
+              <span>after morning check-in send the notes</span>
+              <span>call with boss at 10AM</span>
+              <span>stuck waiting on lunch order</span>
+              <span>pop-up at Bryant Park someday</span>
+            </div>
+            <textarea
+              name="thoughts"
+              id="thoughts"
+              rows="10"
+              aria-labelledby="thoughtsLabel"
+              required
+            ></textarea>
+            <button type="button" class="mic" id="voiceDump" aria-label="Voice to dump" aria-pressed="false" title="Voice to dump">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
         <button type="submit" class="btn primary big" id="mapBtn">Map my thoughts</button>
       </form>
     </section>
@@ -72,16 +93,20 @@
         <div class="decision-box">
           <p class="decision-kicker">Decision</p>
           <p id="decisionText">Pick a node or mark the next step done.</p>
+          <p class="cap-note" id="capNote" hidden></p>
         </div>
 
         <div class="next-actions">
           <button type="button" class="btn primary" id="markDone">Mark done</button>
+          <button type="button" class="btn ghost" id="markReward">Reward</button>
           <button type="button" class="btn ghost" id="focusNode">Show on map</button>
           <button type="button" class="btn ghost" id="pinNext">Pin as next</button>
+          <button type="button" class="btn ghost danger" id="deleteNode">Delete</button>
         </div>
 
         <div class="edit-box" id="editBox" hidden>
           <p class="decision-kicker">Edit node</p>
+          <button type="button" class="btn ghost" id="markOpen" hidden>Mark open</button>
           <label class="mini-field">
             <span>Label</span>
             <input type="text" id="editLabel" maxlength="160" />
@@ -94,23 +119,68 @@
               <option value="action">Do</option>
               <option value="blocker">Blocker</option>
               <option value="note">Note</option>
+              <option value="someday">Someday/Maybe</option>
             </select>
+          </label>
+          <div class="mini-field">
+            <span>Urgent / Important</span>
+            <div class="matrix" id="priorityMatrix" role="group" aria-label="Urgent and Important">
+              <button type="button" data-urgent="true" data-important="true"><b>Must</b><small>Urgent · Important</small></button>
+              <button type="button" data-urgent="false" data-important="true"><b>Should</b><small>Important</small></button>
+              <button type="button" data-urgent="true" data-important="false"><b>Could</b><small>Urgent</small></button>
+              <button type="button" data-urgent="false" data-important="false"><b>Won't</b><small>Neither</small></button>
+            </div>
+          </div>
+          <label class="mini-field">
+            <span>Time</span>
+            <input type="time" id="editTime" />
+          </label>
+          <label class="mini-field">
+            <span>Context</span>
+            <select id="editContext">
+              <option value="">Any</option>
+              <option value="@desk">@desk</option>
+              <option value="@calls">@calls</option>
+              <option value="@errand">@errand</option>
+            </select>
+          </label>
+          <label class="mini-field" id="identityField">
+            <span>Identity</span>
+            <input type="text" id="editIdentity" maxlength="48" placeholder="reliable teammate" />
+          </label>
+          <label class="mini-check">
+            <input type="checkbox" id="editRoutine" />
+            Routine
+          </label>
+          <label class="mini-field">
+            <span>Stack after</span>
+            <select id="editStack"></select>
           </label>
           <label class="mini-field">
             <span>Parent</span>
             <select id="editParent"></select>
           </label>
+          <button type="button" class="btn ghost" id="openBranch">Open as branch</button>
+          <button type="button" class="btn ghost" id="parkNode">Park in Someday/Maybe</button>
           <button type="button" class="btn ghost" id="applyEdit">Save edits</button>
+          <button type="button" class="btn ghost danger" id="deleteSelected">Delete</button>
         </div>
 
         <div class="map-meta">
-          <button type="button" class="btn ghost" id="remap">Edit thoughts</button>
+          <button type="button" class="btn ghost" id="remap">Edit dump</button>
           <button type="button" class="btn ghost" id="toggleReview">Review types</button>
           <button type="button" class="btn ghost" id="resetDay">Clear</button>
         </div>
       </aside>
 
       <div class="canvas-column">
+        <div class="filter-row" id="filterRow">
+          <button type="button" class="chip-btn is-on" data-context="all">All</button>
+          <button type="button" class="chip-btn" data-context="@desk">@desk</button>
+          <button type="button" class="chip-btn" data-context="@calls">@calls</button>
+          <button type="button" class="chip-btn" data-context="@errand">@errand</button>
+          <button type="button" class="chip-btn" id="toggleSomeday" aria-pressed="false">Someday/Maybe</button>
+        </div>
         <div class="review-strip" id="reviewStrip" hidden>
           <div class="review-head">
             <p class="decision-kicker">Classification review</p>
@@ -120,16 +190,38 @@
         </div>
 
         <div class="canvas-wrap" id="canvasWrap">
-          <div class="canvas-banner" id="canvasBanner" hidden>Focus path</div>
+          <div class="canvas-banner" id="canvasBanner" hidden>Must</div>
           <div class="canvas-tools">
             <button type="button" class="tool" id="zoomOut" title="Zoom out (−)">−</button>
             <button type="button" class="tool" id="zoomReset" title="Reset view (0)">⊙</button>
             <button type="button" class="tool" id="zoomIn" title="Zoom in (+)">+</button>
           </div>
           <svg id="mindmap" class="mindmap" role="img" aria-label="Thought mindmap"></svg>
-          <p class="canvas-hint">Drag canvas to pan · drag a box onto another to re-link · scroll to zoom · D done · F focus</p>
+          <div class="legend" id="typeLegend"></div>
+          <p class="canvas-hint">Drag a box onto a branch to make it a subbranch · drag it onto the center to open a new branch · drag the canvas to pan · scroll to zoom</p>
         </div>
+        <aside class="timeline" id="timeline" aria-label="Time block">
+          <p class="decision-kicker">Time block</p>
+          <div class="timeline-track" id="timelineTrack"></div>
+          <p class="timeline-kicker">Unscheduled</p>
+          <div class="timeline-open" id="timelineOpen"></div>
+        </aside>
       </div>
+    </section>
+
+    <section class="panel week-panel" id="panel-week" data-panel="week" hidden>
+      <header class="panel-head">
+        <h2>Week review</h2>
+        <p>Systems over goals. What turned into a move, and what keeps getting in the way.</p>
+      </header>
+      <div class="stat-grid">
+        <article class="stat"><span id="statBecame">0</span><p>Wants became Dos</p></article>
+        <article class="stat"><span id="statBlockers">0</span><p>Blockers recurred</p></article>
+        <article class="stat"><span id="statDone">0</span><p>Moves done</p></article>
+        <article class="stat"><span id="statRewards">0</span><p>Rewards marked</p></article>
+      </div>
+      <div class="insight-list" id="insightList"></div>
+      <button type="button" class="btn ghost" id="closeWeek">Back</button>
     </section>
   </main>
 

@@ -75,4 +75,16 @@ export function todayStorageKey() {
   return dayStorageKey(dateKey());
 }
 
+/** Last `count` days, newest first, including empty days that were never saved. */
+export async function getRecentDays(count = 7) {
+  const keys = [];
+  for (let i = 0; i < count; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    keys.push(dayStorageKey(dateKey(date)));
+  }
+  const data = await chrome.storage.local.get(keys);
+  return keys.map((key) => data[key]).filter((day) => day?.map);
+}
+
 export { dateKey, dayStorageKey };

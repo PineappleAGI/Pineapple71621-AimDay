@@ -92,9 +92,63 @@ h1 {
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.15fr 0.85fr 0.95fr;
   gap: 0.4rem;
   margin-top: 0.75rem;
+}
+
+.cap-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.75rem;
+  color: #8a3b2c;
+}
+
+.next-card.is-celebrating {
+  animation: card-pop 0.55s ease;
+}
+
+@keyframes card-pop {
+  40% { transform: scale(1.03); }
+}
+
+.next-card[data-type="goal"] { border-left-color: #2a5280; }
+.next-card[data-type="action"] { border-left-color: #3d6b4f; }
+.next-card[data-type="blocker"] { border-left-color: #8a3b2c; }
+.next-card[data-type="theme"] { border-left-color: #8a6a2f; }
+.next-card[data-type="someday"] { border-left-color: #6b5b8a; }
+
+.dump-wrap { position: relative; }
+
+.dump-wrap textarea { padding-right: 2.4rem; }
+
+.mic {
+  position: absolute;
+  right: 0.35rem;
+  bottom: 0.35rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mic svg { width: 0.95rem; height: 0.95rem; }
+
+.mic.is-listening {
+  background: #8a3b2c;
+  color: #f7f4ee;
+  border-color: #8a3b2c;
+}
+
+.voice-status {
+  margin: 0;
+  min-height: 0.9rem;
+  font-size: 0.72rem;
+  color: #8a3b2c;
 }
 
 .empty {
@@ -161,6 +215,13 @@ textarea:focus {
   background: transparent;
   color: var(--ink-soft);
   border: 1px solid var(--line);
+}
+
+.btn.danger {
+  width: 100%;
+  margin-top: 0.4rem;
+  color: #8a3b2c;
+  border-color: rgba(138, 59, 44, 0.35);
 }
 
 .btn:disabled {
