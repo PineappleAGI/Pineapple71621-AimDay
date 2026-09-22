@@ -1,10 +1,22 @@
-import { uid } from "./util.js";
+import { uid, thoughtKey } from "./util.js";
+import {
+  parseTime,
+  isSomeday,
+  isRecurring,
+  stackHint,
+  inferContext,
+  inferPriority,
+} from "./signals.js";
+import { pickNextStep } from "./priority.js";
+
+export { thoughtKey };
+export { pickNextStep, explainNext, focusLoad, ACTIVE_CAP, capWarning } from "./priority.js";
 
 const GOAL_RE =
-  /^(i want|i'd like|i would like|i need|i hope|i wish|my goal|goal[:\s]|aiming to|trying to|planning to|someday|eventually)\b/i;
+  /^(i want|i'd like|i would like|i need|i hope|i wish|my goal|goal[:\s]|aiming to|trying to|planning to)\b/i;
 const WANT_INLINE_RE = /\b(my goal is|goal is to|i want to|i need to)\b/i;
 const ACTION_RE =
-  /^(do|make|build|write|send|call|email|fix|ship|finish|start|open|buy|book|schedule|review|read|draft|design|code|deploy|submit|meet|ask|reply|check|clean|organize|plan|outline|research|learn|practice|update|create|add|remove|test|push|pull|merge|publish|prepare|set up|setup|follow up|follow-up|get|put|find|look|pick|sort|move|run|try|talk|message|text|post|share|invite|confirm)\b/i;
+  /^(do|make|build|write|send|call|email|fix|ship|finish|start|open|buy|book|schedule|review|read|draft|design|code|deploy|submit|meet|ask|reply|check|clean|organize|plan|outline|research|learn|practice|update|create|add|remove|test|push|pull|merge|publish|prepare|set up|setup|follow up|follow-up|get|put|find|look|pick|sort|move|run|try|talk|message|text|post|share|invite|confirm|be|go|head|arrive|attend|join)\b/i;
 const NEED_ACTION_RE = /^(need to|have to|gotta|should|must|want to)\b/i;
 const BLOCKER_RE =
   /\b(can't|cannot|blocked|waiting|stuck|depends on|need (?:help|from)|until|blocker|frustrated|overwhelmed)\b/i;
@@ -77,11 +89,16 @@ export function classifyThought(text) {
   const lower = t.toLowerCase();
 
   if (BLOCKER_RE.test(lower)) return "blocker";
+  // Open loops stay out of Want. Want is only explicit intent, not the default.
+  if (isSomeday(t)) return "someday";
   if (GOAL_RE.test(t) || WANT_INLINE_RE.test(lower)) return "goal";
   if (NEED_ACTION_RE.test(t) || ACTION_RE.test(t) || NEXT_RE.test(lower)) return "action";
+  if (stackHint(t) && /\b(send|write|email|draft|make|do|start|finish|review|submit|ship|read|ask|reply|text|message|book|buy|update|prepare)\b/i.test(t)) {
+    return "action";
+  }
   if (/^(maybe|perhaps|wonder|thinking|idea|note)\b/i.test(t)) return "note";
-  // Short imperative-ish lines
   if (t.length < 70 && !/\?$/.test(t) && ACTION_RE.test(t)) return "action";
+  if (parseTime(t) && t.length < 80) return "action";
   return "note";
 }
 
@@ -109,48 +126,41 @@ export function thoughtsToMap(raw) {
     }
 
     const type = classifyThought(text);
-    const node = {
-      id: uid(),
-      label: shorten(text, 72),
-      full: text,
-      type,
-      parentId: rootId,
-      done: false,
-    };
+    const node = stampNewNode(text, type, rootId);
 
     if (type === "goal") {
       goals.push(node);
       currentTheme = node;
       nodes.push(node);
+    } else if (type === "someday") {
+      nodes.push(node);
     } else if (type === "action" || type === "blocker") {
-      if (currentTheme) {
-        node.parentId = currentTheme.id;
-      }
+      if (currentTheme) node.parentId = currentTheme.id;
+      nodes.push(node);
+    } else if (currentTheme) {
+      node.parentId = currentTheme.id;
       nodes.push(node);
     } else {
-      // notes: attach to current goal if any, else hang under root as theme-ish
-      if (currentTheme) {
-        node.parentId = currentTheme.id;
-        nodes.push(node);
-      } else {
-        node.type = "theme";
-        nodes.push(node);
-        currentTheme = node;
-        goals.push(node);
-      }
+      // A leading note can group what follows. It becomes a Theme, never a Want.
+      node.type = "theme";
+      applyInferred(node);
+      node.originType = "theme";
+      nodes.push(node);
+      currentTheme = node;
+      goals.push(node);
     }
   }
 
-  // If no explicit goals, promote first substantial notes into branches
+  // Without an explicit Want, keep Dos as Dos. Only a leading note becomes a Theme.
   const goalLike = nodes.filter((n) => n.type === "goal" || n.type === "theme");
   if (!goalLike.length) {
-    const branches = nodes.filter((n) => n.parentId === rootId);
-    // Cluster: first action/note becomes a theme container
-    if (branches.length >= 2) {
+    const branches = nodes.filter((n) => n.parentId === rootId && n.type !== "someday");
+    if (branches.length >= 2 && branches[0].type === "note") {
       const primary = branches[0];
-      primary.type = primary.type === "action" ? "goal" : "theme";
+      primary.type = "theme";
+      applyInferred(primary);
+      primary.originType = "theme";
       for (let i = 1; i < branches.length; i++) {
-        // Keep some as siblings; attach short actions under primary
         if (branches[i].type === "action" && branches[i].label.length < 50) {
           branches[i].parentId = primary.id;
         }
@@ -170,6 +180,7 @@ export function thoughtsToMap(raw) {
     }
   }
 
+  resolveStacks(nodes);
   const rootLabel = inferRootLabel(lines, nodes);
   const nextStepId = pickNextStep(nodes);
 
@@ -194,31 +205,104 @@ function inferRootLabel(lines, nodes) {
   return "My focus";
 }
 
-/**
- * Prefer: explicit "next/today/first" actions → unfinished actions → unfinished blockers to unblock.
- */
-export function pickNextStep(nodes) {
-  const open = nodes.filter((n) => !n.done);
-  const scored = open
-    .filter((n) => n.type === "action" || n.type === "blocker")
-    .map((n) => {
-      let score = 0;
-      const t = (n.full || n.label).toLowerCase();
-      if (n.type === "action") score += 10;
-      if (NEXT_RE.test(t)) score += 20;
-      if (/\btoday\b|\bnow\b|\basap\b/.test(t)) score += 15;
-      if (n.type === "blocker") score += 6;
-      // Prefer concrete short actions
-      if (n.label.length < 55) score += 3;
-      if (ACTION_RE.test(n.label)) score += 4;
-      return { id: n.id, score };
-    })
-    .sort((a, b) => b.score - a.score);
+function stampNewNode(text, type, rootId) {
+  const node = {
+    id: uid(),
+    label: shorten(text, 72),
+    full: text,
+    type,
+    parentId: rootId,
+    done: false,
+    reward: false,
+    identity: "",
+    stackAfterId: null,
+    stackAfterKey: null,
+    stackManual: false,
+    routineManual: false,
+    priorityManual: false,
+    contextManual: false,
+    timeManual: false,
+    becameDo: false,
+    originType: type,
+  };
+  applyInferred(node);
+  return node;
+}
 
-  if (scored.length) return scored[0].id;
+function applyInferred(node) {
+  const text = node.full || node.label || "";
+  if (!node.timeManual) {
+    const time = parseTime(text);
+    node.timeMinutes = time ? time.minutes : null;
+    node.timeLabel = time ? time.label : null;
+  }
+  if (!node.contextManual) node.context = inferContext(text);
+  if (!node.routineManual) node.recurring = isRecurring(text) || Boolean(stackHint(text));
+  if (!node.priorityManual) {
+    const priority = inferPriority(text, node.type);
+    node.urgent = priority.urgent;
+    node.important = priority.important;
+  }
+}
 
-  const note = open.find((n) => n.type === "note" || n.type === "theme");
-  return note?.id || open[0]?.id || null;
+/** Re-read signals from the label after an edit, keeping manual overrides. */
+export function annotateNode(node) {
+  applyInferred(node);
+  return node;
+}
+
+export function applyNodeType(node, type) {
+  if ((node.originType === "goal" || node.type === "goal") && type === "action") node.becameDo = true;
+  if (type !== "action") node.becameDo = node.originType === "goal" && type === "action";
+  node.type = type;
+  node.manualType = type;
+  if (!node.priorityManual) {
+    const priority = inferPriority(node.full || node.label, type);
+    node.urgent = priority.urgent;
+    node.important = priority.important;
+  }
+  return node;
+}
+
+export function resolveStacks(nodes) {
+  const list = nodes || [];
+  for (const node of list) {
+    if (node.stackManual) {
+      const target = node.stackAfterKey
+        ? list.find(
+            (other) =>
+              other.id !== node.id && thoughtKey(other.full || other.label) === node.stackAfterKey
+          )
+        : null;
+      node.stackAfterId = target?.id || null;
+      continue;
+    }
+
+    const hint = stackHint(node.full || node.label);
+    const target = hint ? matchRoutine(list, node, hint) : null;
+    if (!target) {
+      node.stackAfterId = null;
+      node.stackAfterKey = null;
+      continue;
+    }
+    node.stackAfterId = target.id;
+    node.stackAfterKey = thoughtKey(target.full || target.label);
+    if (!target.routineManual) target.recurring = true;
+  }
+  return list;
+}
+
+function matchRoutine(nodes, self, hint) {
+  const key = thoughtKey(hint);
+  if (!key) return null;
+  const ranked = nodes
+    .filter((node) => node.id !== self.id)
+    .map((node) => ({ node, key: thoughtKey(node.full || node.label) }))
+    .filter((row) => row.key && (row.key.includes(key) || key.includes(row.key)));
+  ranked.sort(
+    (a, b) => Number(!!b.node.recurring) - Number(!!a.node.recurring) || b.key.length - a.key.length
+  );
+  return ranked[0]?.node || null;
 }
 
 export function emptyMap() {
@@ -247,6 +331,39 @@ export function childrenOf(map, parentId) {
   return (map.nodes || []).filter((n) => n.parentId === parentId);
 }
 
+/**
+ * Remove one mapped node. Children move up to its parent.
+ * Returns false when the id is missing or is the root.
+ */
+export function removeNode(map, id) {
+  if (!map?.nodes || !id || id === map.root?.id) return false;
+  const node = map.nodes.find((item) => item.id === id);
+  if (!node) return false;
+
+  const fallbackParent = node.parentId || map.root?.id;
+  const parent = getNode(map, fallbackParent);
+  const parentKey = fallbackParent === map.root?.id ? "root" : parent?.full || parent?.label || "root";
+
+  for (const other of map.nodes) {
+    if (other.id === id) continue;
+    if (other.parentId === id) {
+      other.parentId = fallbackParent;
+      other.manualParent = parentKey;
+    }
+    if (other.stackAfterId === id || other.stackAfterKey === thoughtKey(node.full || node.label)) {
+      other.stackAfterId = null;
+      other.stackAfterKey = null;
+      other.stackManual = true;
+    }
+  }
+
+  map.nodes = map.nodes.filter((item) => item.id !== id);
+  if (map.nextStepId === id || !map.nodes.some((item) => item.id === map.nextStepId && !item.done)) {
+    map.nextStepId = pickNextStep(map.nodes);
+  }
+  return true;
+}
+
 export function progress(map) {
   const items = (map?.nodes || []).filter((n) => n.type === "action" || n.type === "blocker");
   if (!items.length) {
@@ -260,23 +377,15 @@ export function progress(map) {
 }
 
 export function typeCounts(map) {
-  const counts = { goal: 0, theme: 0, action: 0, blocker: 0, note: 0 };
+  const counts = { goal: 0, theme: 0, action: 0, blocker: 0, note: 0, someday: 0 };
   for (const n of map?.nodes || []) {
     if (counts[n.type] != null) counts[n.type] += 1;
   }
   return counts;
 }
 
-/** Normalize text for matching nodes across remaps. */
-export function thoughtKey(text) {
-  return String(text || "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
- * Carry done flags, manual types, and next-step choice onto a freshly parsed map.
+ * Carry done flags, manual types, priority, and next-step choice onto a freshly parsed map.
  */
 export function mergeMapState(prevMap, nextMap) {
   if (!nextMap) return nextMap;
@@ -290,24 +399,10 @@ export function mergeMapState(prevMap, nextMap) {
   for (const n of nextMap.nodes) {
     const prev = prevByKey.get(thoughtKey(n.full || n.label));
     if (!prev) continue;
-    n.done = !!prev.done;
-    if (prev.manualType) {
-      n.type = prev.manualType;
-      n.manualType = prev.manualType;
-    }
-    if (prev.manualParent && prev.manualParent !== "root") {
-      const parentMatch = nextMap.nodes.find(
-        (p) => thoughtKey(p.full || p.label) === thoughtKey(prev.manualParent)
-      );
-      if (parentMatch) {
-        n.parentId = parentMatch.id;
-        n.manualParent = prev.manualParent;
-      }
-    } else if (prev.manualParent === "root") {
-      n.parentId = nextMap.root.id;
-      n.manualParent = "root";
-    }
+    carryNode(prev, n, nextMap);
   }
+
+  resolveStacks(nextMap.nodes);
 
   const prevNext = getNode(prevMap, prevMap.nextStepId);
   if (prevNext) {
@@ -323,6 +418,56 @@ export function mergeMapState(prevMap, nextMap) {
   }
 
   return nextMap;
+}
+
+function carryNode(prev, node, nextMap) {
+  node.done = !!prev.done;
+  node.reward = !!prev.reward;
+  node.identity = prev.identity || "";
+  node.originType = prev.originType || node.originType;
+  node.becameDo = !!prev.becameDo;
+
+  if (prev.manualType) {
+    node.type = prev.manualType;
+    node.manualType = prev.manualType;
+  }
+  if (node.originType === "goal" && node.type === "action") node.becameDo = true;
+
+  if (prev.priorityManual) {
+    node.urgent = !!prev.urgent;
+    node.important = !!prev.important;
+    node.priorityManual = true;
+  }
+  if (prev.contextManual) {
+    node.context = prev.context || null;
+    node.contextManual = true;
+  }
+  if (prev.routineManual) {
+    node.recurring = !!prev.recurring;
+    node.routineManual = true;
+  }
+  if (prev.timeManual) {
+    node.timeMinutes = Number.isFinite(prev.timeMinutes) ? prev.timeMinutes : null;
+    node.timeLabel = prev.timeLabel || null;
+    node.timeManual = true;
+  }
+  if (prev.stackManual) {
+    node.stackManual = true;
+    node.stackAfterKey = prev.stackAfterKey || null;
+  }
+
+  if (prev.manualParent && prev.manualParent !== "root") {
+    const parentMatch = nextMap.nodes.find(
+      (p) => thoughtKey(p.full || p.label) === thoughtKey(prev.manualParent)
+    );
+    if (parentMatch) {
+      node.parentId = parentMatch.id;
+      node.manualParent = prev.manualParent;
+    }
+  } else if (prev.manualParent === "root") {
+    node.parentId = nextMap.root.id;
+    node.manualParent = "root";
+  }
 }
 
 /** Ancestor chain from root → target (inclusive). */

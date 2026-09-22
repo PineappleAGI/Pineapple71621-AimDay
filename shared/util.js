@@ -9,3 +9,11 @@ export function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 }
+
+/** Normalize text for matching nodes across remaps. */
+export function thoughtKey(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}

@@ -20,18 +20,29 @@
     <p class="kicker">Current focus</p>
     <h2 id="nextText"></h2>
     <p class="hint" id="nextHint">Clearest next action</p>
+    <p class="cap-note" id="capNote" hidden></p>
     <div class="row">
       <button type="button" class="btn primary" id="markDone">Mark done</button>
+      <button type="button" class="btn ghost" id="markReward">Reward</button>
       <button type="button" class="btn ghost" id="openMap">Open map</button>
     </div>
+    <button type="button" class="btn ghost danger" id="deleteNode">Delete</button>
   </section>
 
   <p class="empty" id="empty" hidden>No map yet — capture a thought below.</p>
 
-  <label class="field">
+  <div class="field">
     <span class="field-label">Quick capture</span>
-    <textarea id="quick" placeholder="One thought per line…" maxlength="500"></textarea>
-  </label>
+    <div class="dump-wrap">
+      <textarea id="quick" placeholder="be in office today 8:30AM&#10;call with boss at 10AM&#10;pop-up at Bryant Park someday" maxlength="500"></textarea>
+      <button type="button" class="mic" id="voiceDump" aria-label="Voice to dump" aria-pressed="false" title="Voice to dump">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+        </svg>
+      </button>
+    </div>
+    <p class="voice-status" id="voiceStatus" aria-live="polite"></p>
+  </div>
 
   <div class="actions">
     <button type="button" class="btn ghost" id="openCapture">Full dump</button>
