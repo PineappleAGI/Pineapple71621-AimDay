@@ -4,7 +4,7 @@ A **Chrome extension** for people whose heads are full and whose days need one c
 
 > Dump the noise. See what you want. Take the next step.
 
-**No account. No API key. No internet required.** Everything runs on your own machine.
+**No account. No API key. No server.** Your thoughts are parsed on your machine and stay there.
 
 ---
 
@@ -20,7 +20,7 @@ AimDay is a Manifest V3 extension. Use Google Chrome, or another Chromium browse
 
 ### Step 2 — Download the extension folder
 
-1. Open <https://github.com/PineappleAGI/AimDay>
+1. Open <https://github.com/PineappleAGI/Pineapple71621-AimDay>
 2. Click the green **Code** button → **Download ZIP** (or clone with git)
 3. Unzip it somewhere you'll remember (e.g. your Desktop or `~/Documents/`)
 
@@ -43,35 +43,76 @@ AimDay appears in your extensions list with its icon.
 
 ### First: open the side panel
 
-Click the **AimDay** icon in the Chrome toolbar — the **side panel** opens beside whatever you're doing. It shows today's next step and a quick capture box, so you can add a thought without leaving the page.
+Click the **AimDay** icon in the Chrome toolbar — the **side panel** opens beside whatever you're doing. It shows today's current focus and a quick capture box, so you can add a thought without leaving the page.
 
-Tap **Open map** for the full dashboard whenever you want the whole picture.
+Press **⌘/Ctrl+Enter** to add a thought, or tap **Open map** for the full dashboard.
 
 ### Capture — get it out of your head
 
 Type freeform in the side panel, or hit **Full dump** for the big dashboard textarea. Messy is fine — worries, goals, half-thoughts, one idea per line.
 
-Press **⌘/Ctrl+Enter** to add a thought from the side panel without reaching for the mouse.
+Times work too: write `call with boss at 10AM` or `be in office 8:30AM` and AimDay reads the clock time straight out of the line.
+
+Prefer talking? Tap the **microphone** and speak your dump. Voice runs on Chrome's **on-device** recognition only — if your machine can't do it locally, AimDay tells you and records nothing rather than sending audio to a speech server. The first use may download a one-time language pack.
 
 ### Map — see what you actually said
 
-Submit your dump and AimDay splits it into lines, sorts each one into a **want**, a **do**, a **blocker**, or a **note**, and lays them out as a mindmap around your central focus. The clearest next step is highlighted.
+Submit your dump and AimDay splits it into lines, sorts each one, and lays them out as a mindmap around your central focus.
 
-Got a line in the wrong bucket? The **Review types** strip lets you fix any classification in one dropdown — the map updates as you go.
+| Type | What it means |
+|---|---|
+| **Want** | An outcome you're after |
+| **Do** | A concrete action |
+| **Blocker** | Something in the way |
+| **Theme** | A grouping the dump implied |
+| **Note** | Context worth keeping |
+| **Someday/Maybe** | Parked — off today's list, still on the map |
 
-### Next step — one honest move
+Got a line in the wrong bucket? The **Review types** strip fixes any classification in one dropdown, and the map updates as you go.
 
-The rail on the left names your current focus and why it was picked. **Mark done** advances you to the next clearest move. **Focus** dims everything except the path from your center to that step, so the rest of the noise gets out of the way.
+### Prioritize — Urgent × Important
 
-Prefer a different move? Click any action on the map to promote it, or select a node and hit **Pin as next**.
+Select any node and set its **Urgent / Important** square. AimDay names the quadrant the way MoSCoW does:
 
-### Rearrange — make the map yours
+- **Must** — urgent and important
+- **Should** — important, not urgent
+- **Could** — urgent, not important
+- **Won't** — neither
 
-- **Drag a box** onto a want, theme, or note to re-link it under a new parent
-- **Drag the canvas** to pan, scroll to zoom
-- **Select a node** to rename it, change its type, or move it with the parent dropdown
+Your **current focus** is picked from those scores, and the rail explains *why* that node won. Disagree? Hit **Pin as next**.
 
-Keyboard: **D** mark done · **F** focus path · **N** jump to next step · **E** edit your dump · **+** / **−** / **0** zoom.
+AimDay also holds an **Ivy Lee cap of six** active Wants and Dos. Go past it and the rail says so, nudging you to park the rest in **Someday/Maybe** instead of pretending you'll do eleven things.
+
+### Focus — only what must happen
+
+**Focus** hides everything except your **Must** tasks, so a crowded map collapses to the handful that actually matter today. Press **F** or use the header button.
+
+### Time block — give the day a shape
+
+Nodes with a time appear on the **Time block** rail in order, with everything else listed underneath as **Unscheduled**. Drag within the track to move a task, or set a clock time in the node editor.
+
+### Shape the map
+
+- **Drag a box onto a branch** to make it a subbranch
+- **Drag a box onto the center** to open it as a new branch
+- **Drag the canvas** to pan, **scroll** to zoom, **Full** for full screen
+- **Select a node** to rename it, change its type, set a context (`@desk`, `@calls`, `@errand`), mark it **Routine**, **Stack after** another task, attach an **Identity** ("reliable teammate"), park it, or delete it
+
+The chips above the map filter by context, and you can rename them — tap **Edit buttons** to make them match your life instead of the defaults.
+
+Keyboard: **D** mark done · **F** focus Must · **N** jump to current focus · **E** edit your dump · **+** / **−** / **0** zoom.
+
+### Finish — mark done, mark rewards
+
+**Mark done** advances you to the next clearest move. **Reward** logs that you actually gave yourself something for it, which the week review counts.
+
+### Week review — systems over goals
+
+Open **Week review** for the rollup: how many Wants became Dos, which Blockers keep recurring, moves completed, and rewards marked — plus plain-language insights about what keeps stalling your days.
+
+### Share — get the map out
+
+**Share** downloads the current map as an **image** or a **PDF**, rendered locally from the canvas. Nothing is uploaded.
 
 ### Morning nudge
 
@@ -83,12 +124,24 @@ AimDay can send one notification around 8am asking what today's next step is; cl
 
 | Piece | What it does |
 |---|---|
-| **Side panel** | Today's next step plus quick capture, beside whatever you're reading |
-| **Dashboard** | Full thought dump, mindmap canvas, focus rail, and settings |
-| **Parser** | Splits your dump into lines and sorts them into wants, dos, blockers, and notes |
-| **Mindmap** | Pan, zoom, drag-to-relink, rename, retype, and pin your own next step |
-| **Focus mode** | Dims everything except the path from your center to the next step |
+| **Side panel** | Today's focus plus quick capture, beside whatever you're reading |
+| **Dashboard** | Full dump, mindmap canvas, focus rail, time block, and settings |
+| **Parser** | Splits your dump into lines and sorts them into Wants, Dos, Blockers, and more |
+| **Priority** | Urgent × Important scoring, MoSCoW naming, and a six-task Ivy Lee cap |
+| **Mindmap** | Pan, zoom, full screen, drag-to-rebranch, and per-node editing |
+| **Time block** | Clock times read from your dump, laid out as a day |
+| **Week review** | Wants that became Dos, recurring Blockers, moves done, rewards marked |
+| **Share** | Download the map as an image or PDF, rendered on your machine |
+| **Voice capture** | On-device dictation into the dump field |
 | **Morning nudge** | Optional ~8am notification, and optional open-on-startup |
+
+---
+
+## Your Data
+
+Everything lives in `chrome.storage.local` on your machine, keyed by date. AimDay has no server, makes no network requests, and sends nothing anywhere — the classification, layout, and exports all run locally. Voice capture is restricted to Chrome's on-device engine and refuses to record if that isn't available.
+
+Each day is kept until you clear it or remove the extension.
 
 ---
 

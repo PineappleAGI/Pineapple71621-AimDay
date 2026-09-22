@@ -7,6 +7,8 @@
   --accent: #3b6ea5;
   --accent-soft: rgba(59, 110, 165, 0.14);
   --ok: #3d6b4f;
+  --gold: #b8893d;
+  --gold-soft: #f3ead2;
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "Outfit", system-ui, sans-serif;
   --radius: 16px;
@@ -27,7 +29,34 @@ body {
   line-height: 1.45;
 }
 
-.top { margin-bottom: 0.9rem; }
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.top-text { min-width: 0; }
+
+.pineapple-stamp {
+  flex: 0 0 auto;
+  display: block;
+  margin-top: 1px;
+  padding: 0.3rem 0.45rem;
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--gold-soft);
+  transform: rotate(-1.5deg);
+  text-align: center;
+  color: var(--gold);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+}
 
 .brand {
   display: flex;

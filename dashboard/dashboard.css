@@ -9,6 +9,7 @@
   --accent-soft: rgba(59, 110, 165, 0.14);
   --ok: #3d6b4f;
   --gold: #b8893d;
+  --gold-soft: #f3ead2;
   --line: rgba(28, 25, 21, 0.12);
   --shadow: 0 14px 40px rgba(28, 25, 21, 0.08);
   --radius: 16px;
@@ -119,6 +120,24 @@ body {
   gap: 0.4rem;
   margin-left: auto;
   align-items: center;
+}
+
+.pineapple-stamp {
+  flex: 0 0 auto;
+  display: block;
+  padding: 0.35rem 0.55rem;
+  border: 2px solid var(--gold);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--gold-soft);
+  transform: rotate(-1.5deg);
+  text-align: center;
+  color: var(--gold);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.45;
+  white-space: nowrap;
 }
 
 .share-wrap {
