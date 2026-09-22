@@ -130,12 +130,12 @@ function bind() {
     state.focusMode = !state.focusMode;
     renderMap();
     renderChrome();
+    fitNodes();
   });
   $("#focusNode").addEventListener("click", () => {
     const id = focusedNodeId();
     if (id) {
       state.selectedId = id;
-      state.focusMode = true;
       centerOn(id);
       renderMap();
       renderNext();
@@ -620,7 +620,7 @@ function renderMap() {
 
   const { nodes, edges } = state.layout;
   const { x: vx, y: vy, scale } = state.view;
-  const pathIds = state.focusMode ? focusNodeIds(map) : pathToNode(map, map.nextStepId);
+  const pathIds = state.focusMode ? new Set([map.root?.id, ...mustIds(map)]) : pathToNode(map, map.nextStepId);
 
   const edgeEls = edges
     .map((e) => {
@@ -915,6 +915,36 @@ async function finishNodeClick(id) {
   renderChrome();
 }
 
+function fitNodes() {
+  const wrap = $("#canvasWrap");
+  const nodes = state.layout?.nodes || [];
+  if (!wrap || !nodes.length) return;
+  const rect = wrap.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    minX = Math.min(minX, node.x - node.w / 2);
+    maxX = Math.max(maxX, node.x + node.w / 2);
+    minY = Math.min(minY, node.y - node.h / 2);
+    maxY = Math.max(maxY, node.y + node.h / 2);
+  }
+  const pad = 48;
+  const scale = Math.min(
+    1.1,
+    (rect.width - pad * 2) / Math.max(1, maxX - minX),
+    (rect.height - pad * 2) / Math.max(1, maxY - minY)
+  );
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  state.view.scale = scale;
+  state.view.x = rect.width / 2 - cx * scale;
+  state.view.y = rect.height / 2 - cy * scale;
+  applyView();
+}
+
 function fitIfNeeded() {
   const wrap = $("#canvasWrap");
   if (!state.layout || !wrap) return;
@@ -1107,6 +1137,7 @@ function onKeyDown(e) {
     state.focusMode = !state.focusMode;
     renderMap();
     renderChrome();
+    fitNodes();
   } else if (e.key === "n" || e.key === "N") {
     e.preventDefault();
     const id = state.day.map?.nextStepId;
@@ -1308,17 +1339,10 @@ function visibleNodes(map) {
       parentId = parent.parentId;
     }
   }
-  let nodes = [...kept.values()];
-  if (state.focusMode) {
-    const ids = focusNodeIds(map);
-    nodes = nodes.filter((node) => ids.has(node.id));
-    for (const id of ids) {
-      if (id === map.root?.id || nodes.some((node) => node.id === id)) continue;
-      const node = all.find((item) => item.id === id);
-      if (node) nodes.push(node);
-    }
-  }
-  return nodes;
+  const nodes = [...kept.values()];
+  if (!state.focusMode) return nodes;
+  const must = mustIds(map);
+  return attachMustNodes(map, nodes.filter((node) => must.has(node.id)));
 }
 
 function mustIds(map) {
@@ -1331,23 +1355,22 @@ function mustIds(map) {
   return ids;
 }
 
-/** Must tasks, plus the branch that holds each one so the map stays connected. */
-function focusNodeIds(map) {
-  const ids = mustIds(map);
-  if (!ids.size && map?.nextStepId) ids.add(map.nextStepId);
-  const all = map?.nodes || [];
-  for (const id of [...ids]) {
-    let parentId = all.find((node) => node.id === id)?.parentId;
+/** Hang each Must task on its nearest Must parent, or on the center. */
+function attachMustNodes(map, nodes) {
+  const must = new Set(nodes.map((node) => node.id));
+  const all = new Map((map?.nodes || []).map((node) => [node.id, node]));
+  const rootId = map?.root?.id || null;
+  return nodes.map((node) => {
+    let parentId = node.parentId;
     const guard = new Set();
-    while (parentId && parentId !== map?.root?.id && !guard.has(parentId)) {
+    while (parentId && parentId !== rootId && !must.has(parentId) && !guard.has(parentId)) {
       guard.add(parentId);
-      ids.add(parentId);
-      const parent = all.find((node) => node.id === parentId);
-      parentId = parent?.parentId;
+      parentId = all.get(parentId)?.parentId;
     }
-  }
-  if (map?.root?.id) ids.add(map.root.id);
-  return ids;
+    if (!must.has(parentId)) parentId = rootId;
+    if (parentId === node.parentId) return node;
+    return { ...node, parentId };
+  });
 }
 
 function focusedNodeId() {
@@ -1373,7 +1396,7 @@ function renderTimeline(map) {
   const track = $("#timelineTrack");
   const open = $("#timelineOpen");
   if (!track || !open) return;
-  const nodes = visibleNodes(map).filter((node) => !state.focusMode || mustIds(map).has(node.id) || node.id === map?.nextStepId);
+  const nodes = visibleNodes(map);
   const timed = nodes
     .filter((node) => Number.isFinite(node.timeMinutes))
     .sort((a, b) => a.timeMinutes - b.timeMinutes);
@@ -1383,7 +1406,7 @@ function renderTimeline(map) {
       const colors = colorsFor(node.type);
       return `<button type="button" class="time-item ${state.selectedId === node.id ? "is-selected" : ""}" data-id="${node.id}" style="border-color:${colors.stroke}">
         <span class="time-label">${escapeHtml(node.timeLabel || formatClock(node.timeMinutes))}</span>
-        <span class="time-name">${escapeHtml(shorten(node.label, 32))}</span>
+        <span class="time-name">${escapeHtml(node.full || node.label)}</span>
       </button>`;
     })
     .join("");
@@ -1393,7 +1416,7 @@ function renderTimeline(map) {
       .slice(0, 6)
       .map(
         (node) =>
-          `<button type="button" class="open-item ${state.selectedId === node.id ? "is-selected" : ""}" data-id="${node.id}">${escapeHtml(shorten(node.label, 32))}</button>`
+          `<button type="button" class="open-item ${state.selectedId === node.id ? "is-selected" : ""}" data-id="${node.id}">${escapeHtml(node.full || node.label)}</button>`
       )
       .join("") || `<p class="timeline-empty">Nothing open</p>`;
 }
