@@ -181,13 +181,7 @@
       </aside>
 
       <div class="canvas-column">
-        <div class="filter-row" id="filterRow">
-          <button type="button" class="chip-btn is-on" data-context="all">All</button>
-          <button type="button" class="chip-btn" data-context="@desk">@desk</button>
-          <button type="button" class="chip-btn" data-context="@calls">@calls</button>
-          <button type="button" class="chip-btn" data-context="@errand">@errand</button>
-          <button type="button" class="chip-btn" id="toggleSomeday" aria-pressed="false">Someday/Maybe</button>
-        </div>
+        <div class="filter-row" id="filterRow"></div>
         <div class="review-strip" id="reviewStrip" hidden>
           <div class="review-head">
             <p class="decision-kicker">Classification review</p>
@@ -202,6 +196,7 @@
             <button type="button" class="tool" id="zoomOut" title="Zoom out (−)">−</button>
             <button type="button" class="tool" id="zoomReset" title="Reset view (0)">⊙</button>
             <button type="button" class="tool" id="zoomIn" title="Zoom in (+)">+</button>
+            <button type="button" class="tool full" id="fullScreen" title="Full screen" aria-pressed="false">Full</button>
           </div>
           <svg id="mindmap" class="mindmap" role="img" aria-label="Thought mindmap"></svg>
           <div class="legend" id="typeLegend"></div>

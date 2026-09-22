@@ -579,6 +579,27 @@ textarea:focus, input:focus, select:focus {
 
 .tool:hover { background: #fff; }
 
+.tool.full {
+  width: auto;
+  padding: 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.canvas-wrap:fullscreen,
+.canvas-wrap:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background-color: var(--paper);
+}
+
+.canvas-wrap:fullscreen .mindmap,
+.canvas-wrap:-webkit-full-screen .mindmap {
+  width: 100%;
+  height: 100%;
+}
+
 .canvas-hint {
   position: absolute;
   left: 0.9rem;
@@ -901,6 +922,79 @@ textarea:focus, input:focus, select:focus {
   background: var(--accent-soft);
   border-color: rgba(59, 110, 165, 0.35);
   color: var(--accent-deep);
+}
+
+.filter-edit {
+  margin-left: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.1;
+  color: var(--accent-deep);
+  background: transparent;
+  border: 1px dashed rgba(59, 110, 165, 0.7);
+  border-radius: 8px;
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+}
+
+.filter-edit:hover {
+  background: var(--accent-soft);
+}
+
+.filter-edit.is-done {
+  margin-left: 0;
+  border-style: solid;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f7f4ee;
+}
+
+.filter-edit.is-done:hover {
+  background: var(--accent-deep);
+}
+
+.chip-edit {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 0.15rem 0 0.15rem;
+}
+
+.filter-row .chip-edit input {
+  width: 7.4rem;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0.18rem 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.chip-x {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.35rem;
+  cursor: pointer;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .legend {

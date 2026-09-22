@@ -38,6 +38,7 @@ const state = {
   applyingRemote: false,
   contextFilter: "all",
   showSomeday: false,
+  editingFilters: false,
   celebrateId: null,
   returnStep: "capture",
   voice: null,
@@ -133,11 +134,12 @@ function bind() {
     },
   });
   $("#filterRow").addEventListener("click", onFilterClick);
-  $("#toggleSomeday").addEventListener("click", () => {
-    state.showSomeday = !state.showSomeday;
-    $("#toggleSomeday").classList.toggle("is-on", state.showSomeday);
-    $("#toggleSomeday").setAttribute("aria-pressed", state.showSomeday ? "true" : "false");
-    renderMap();
+  $("#filterRow").addEventListener("change", onFilterFieldChange);
+  $("#filterRow").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && event.target.matches("input")) {
+      event.preventDefault();
+      event.target.blur();
+    }
   });
   $("#priorityMatrix").addEventListener("click", onPriorityClick);
   $("#timeline").addEventListener("pointerdown", onTimelinePointerDown);
@@ -175,6 +177,8 @@ function bind() {
   $("#zoomIn").addEventListener("click", () => zoomBy(1.15));
   $("#zoomOut").addEventListener("click", () => zoomBy(1 / 1.15));
   $("#zoomReset").addEventListener("click", resetView);
+  $("#fullScreen").addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", onFullscreenChange);
 
   const wrap = $("#canvasWrap");
   wrap.addEventListener("pointerdown", onPointerDown);
@@ -402,6 +406,7 @@ function render() {
     syncGhost();
   }
   if (state.step === "map") {
+    renderFilters();
     renderMap();
     renderNext();
     renderEdit();
@@ -962,6 +967,28 @@ function fitNodes() {
   applyView();
 }
 
+async function toggleFullscreen() {
+  const wrap = $("#canvasWrap");
+  if (!wrap) return;
+  try {
+    if (document.fullscreenElement === wrap) await document.exitFullscreen();
+    else await wrap.requestFullscreen();
+  } catch {
+    /* The browser can refuse full screen outside a direct click. */
+  }
+}
+
+function onFullscreenChange() {
+  const on = document.fullscreenElement === $("#canvasWrap");
+  const button = $("#fullScreen");
+  if (button) {
+    button.title = on ? "Exit full screen" : "Full screen";
+    button.setAttribute("aria-pressed", on ? "true" : "false");
+    button.textContent = on ? "Exit" : "Full";
+  }
+  requestAnimationFrame(() => fitNodes());
+}
+
 function fitIfNeeded() {
   const wrap = $("#canvasWrap");
   if (!state.layout || !wrap) return;
@@ -1248,14 +1275,177 @@ async function onPriorityClick(e) {
 }
 
 function onFilterClick(e) {
+  const actionEl = e.target.closest("[data-action]");
+  const action = actionEl?.dataset.action;
+  if (action === "edit-filters") {
+    state.editingFilters = true;
+    renderFilters();
+    return;
+  }
+  if (action === "done-filters") {
+    state.editingFilters = false;
+    renderFilters();
+    return;
+  }
+  if (action === "add-filter") {
+    addFilter();
+    return;
+  }
+  if (action === "remove-filter") {
+    removeFilter(Number(actionEl.dataset.index));
+    return;
+  }
+  if (action === "someday") {
+    state.showSomeday = !state.showSomeday;
+    renderFilters();
+    renderMap();
+    return;
+  }
   const button = e.target.closest("[data-context]");
-  if (!button) return;
+  if (!button || state.editingFilters) return;
   state.contextFilter = button.dataset.context;
-  document.querySelectorAll("#filterRow [data-context]").forEach((el) => {
-    el.classList.toggle("is-on", el === button);
-  });
+  renderFilters();
   renderMap();
   renderNext();
+}
+
+function filterSettings() {
+  const saved = state.settings?.filters;
+  return {
+    all: String(saved?.all || "All").trim() || "All",
+    someday: String(saved?.someday || "Someday/Maybe").trim() || "Someday/Maybe",
+    contexts: Array.isArray(saved?.contexts) ? saved.contexts.filter(Boolean) : ["@desk", "@calls", "@errand"],
+  };
+}
+
+function normalizeContext(value) {
+  let text = String(value || "").trim().replace(/\s+/g, "-");
+  if (!text) return "";
+  text = text.replace(/^@+/, "");
+  if (!text) return "";
+  return `@${text}`.slice(0, 24);
+}
+
+function renderFilters() {
+  const host = $("#filterRow");
+  if (!host) return;
+  const filters = filterSettings();
+  if (state.editingFilters) {
+    host.innerHTML = `
+      <label class="chip-edit"><span class="sr">All</span><input type="text" data-filter="all" value="${escapeHtml(filters.all)}" maxlength="24" /></label>
+      ${filters.contexts
+        .map(
+          (ctx, index) => `<label class="chip-edit">
+            <input type="text" data-filter="context" data-index="${index}" value="${escapeHtml(ctx)}" maxlength="24" />
+            <button type="button" class="chip-x" data-action="remove-filter" data-index="${index}" aria-label="Remove ${escapeHtml(ctx)}">×</button>
+          </label>`
+        )
+        .join("")}
+      <label class="chip-edit"><span class="sr">Someday</span><input type="text" data-filter="someday" value="${escapeHtml(filters.someday)}" maxlength="24" /></label>
+      <button type="button" class="filter-edit" data-action="add-filter">Add button</button>
+      <button type="button" class="filter-edit is-done" data-action="done-filters">Done</button>`;
+  } else {
+    host.innerHTML = `
+      <button type="button" class="chip-btn ${state.contextFilter === "all" ? "is-on" : ""}" data-context="all">${escapeHtml(filters.all)}</button>
+      ${filters.contexts
+        .map(
+          (ctx) =>
+            `<button type="button" class="chip-btn ${state.contextFilter === ctx ? "is-on" : ""}" data-context="${escapeHtml(ctx)}">${escapeHtml(ctx)}</button>`
+        )
+        .join("")}
+      <button type="button" class="chip-btn ${state.showSomeday ? "is-on" : ""}" data-action="someday" aria-pressed="${state.showSomeday ? "true" : "false"}">${escapeHtml(filters.someday)}</button>
+      <button type="button" class="filter-edit" data-action="edit-filters">Edit buttons</button>`;
+  }
+  renderContextOptions();
+}
+
+function renderContextOptions() {
+  const select = $("#editContext");
+  if (!select) return;
+  const current = select.value;
+  const filters = filterSettings();
+  select.innerHTML =
+    `<option value="">Any</option>` +
+    filters.contexts.map((ctx) => `<option value="${escapeHtml(ctx)}">${escapeHtml(ctx)}</option>`).join("");
+  if ([...select.options].some((option) => option.value === current)) select.value = current;
+}
+
+async function saveFilters(filters, refreshMap = false) {
+  state.settings = await saveSettings({ filters });
+  renderFilters();
+  if (refreshMap) {
+    renderMap();
+    renderNext();
+  }
+}
+
+async function onFilterFieldChange(event) {
+  const input = event.target;
+  if (!input.matches?.("input[data-filter]")) return;
+  const filters = filterSettings();
+  const kind = input.dataset.filter;
+  if (kind === "all") {
+    filters.all = input.value.trim() || "All";
+    await saveFilters(filters);
+    return;
+  }
+  if (kind === "someday") {
+    filters.someday = input.value.trim() || "Someday/Maybe";
+    await saveFilters(filters);
+    return;
+  }
+  const index = Number(input.dataset.index);
+  const old = filters.contexts[index];
+  const next = normalizeContext(input.value);
+  const duplicate = filters.contexts.some((ctx, i) => i !== index && ctx.toLowerCase() === next.toLowerCase());
+  if (!next || !old || next === old || duplicate) {
+    input.value = old || "";
+    return;
+  }
+  filters.contexts[index] = next;
+  for (const node of state.day.map?.nodes || []) {
+    if (node.context === old) {
+      node.context = next;
+      node.contextManual = true;
+    }
+  }
+  if (state.contextFilter === old) state.contextFilter = next;
+  await persist();
+  await saveFilters(filters, true);
+}
+
+async function addFilter() {
+  const filters = filterSettings();
+  let name = "@new";
+  let n = 2;
+  while (filters.contexts.some((ctx) => ctx.toLowerCase() === name.toLowerCase())) {
+    name = `@new${n}`;
+    n += 1;
+  }
+  filters.contexts.push(name);
+  state.editingFilters = true;
+  await saveFilters(filters);
+  const inputs = document.querySelectorAll('#filterRow input[data-filter="context"]');
+  const field = inputs[inputs.length - 1];
+  field?.focus();
+  field?.select();
+}
+
+async function removeFilter(index) {
+  const filters = filterSettings();
+  const removed = filters.contexts[index];
+  if (!removed) return;
+  filters.contexts.splice(index, 1);
+  for (const node of state.day.map?.nodes || []) {
+    if (node.context === removed) {
+      node.context = null;
+      node.contextManual = true;
+    }
+  }
+  if (state.contextFilter === removed) state.contextFilter = "all";
+  await persist();
+  state.editingFilters = true;
+  await saveFilters(filters, true);
 }
 
 function paintMatrix(node) {
