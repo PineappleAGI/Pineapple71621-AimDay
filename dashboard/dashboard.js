@@ -100,6 +100,21 @@ function bind() {
   $("#deleteNode").addEventListener("click", () => onDeleteNode(state.day.map?.nextStepId));
   $("#deleteSelected").addEventListener("click", () => onDeleteNode(state.selectedId));
   $("#openWeek").addEventListener("click", onOpenWeek);
+  $("#shareMap").addEventListener("click", (event) => {
+    event.stopPropagation();
+    const pop = $("#sharePop");
+    pop.hidden = !pop.hidden;
+    $("#shareMap").setAttribute("aria-expanded", pop.hidden ? "false" : "true");
+  });
+  $("#downloadImage").addEventListener("click", () => downloadShare("png"));
+  $("#downloadPdf").addEventListener("click", () => downloadShare("pdf"));
+  document.addEventListener("click", (event) => {
+    if ($("#shareWrap")?.contains(event.target)) return;
+    const pop = $("#sharePop");
+    if (!pop) return;
+    pop.hidden = true;
+    $("#shareMap")?.setAttribute("aria-expanded", "false");
+  });
   $("#closeWeek").addEventListener("click", () => {
     const back = state.returnStep === "week" ? (state.day.mapped ? "map" : "capture") : state.returnStep;
     state.step = back || "capture";
@@ -430,6 +445,8 @@ function renderChrome() {
 
   const onMap = state.step === "map";
   $("#backToDump").hidden = !onMap;
+  $("#shareWrap").hidden = !onMap;
+  if (!onMap) $("#sharePop").hidden = true;
   toggleFocus.hidden = !onMap;
   toggleFocus.classList.toggle("primary", state.focusMode);
   toggleFocus.textContent = state.focusMode ? "Exit focus" : "Focus";
@@ -1532,6 +1549,198 @@ function renderWeek(rollup) {
       return `<article class="insight ${calm ? "is-calm" : ""}"><h3>${escapeHtml(insight.title)}</h3><p>${escapeHtml(insight.fix)}</p></article>`;
     })
     .join("");
+}
+
+const SHARE_STYLE = `
+  text { font-family: Outfit, system-ui, sans-serif; }
+  .mm-edge { fill: none; stroke: rgba(28, 25, 21, 0.16); stroke-width: 2; stroke-linecap: round; }
+  .mm-edge.is-next, .mm-edge.on-path.is-next { stroke: rgba(59, 110, 165, 0.55); stroke-width: 2.5; }
+  .mm-node .label { font-size: 12px; font-weight: 500; }
+  .mm-node.is-root .label { font-size: 13px; font-weight: 500; }
+  .mm-node .chip { font-size: 9px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+  .mm-node .subline { font-size: 9px; font-style: italic; fill: #5c564c; }
+  .mm-node .reward-mark { font-size: 11px; fill: #b8893d; }
+  .mm-node .bubble { stroke-width: 1.75; }
+  .mm-node.is-selected .bubble { stroke-width: 3.25; }
+  .mm-node.is-done { opacity: 0.72; }
+  .mm-node.is-over-cap { opacity: 0.45; }
+  .mm-node[data-type="someday"] .bubble { stroke-dasharray: 5 3; }
+  .mm-check .hit { fill: transparent; }
+  svg.is-focus .mm-node:not(.on-path) { opacity: 0.12; }
+  svg.is-focus .mm-edge:not(.on-path) { opacity: 0.08; }
+  svg.is-focus .mm-node.on-path { opacity: 1; }
+  .share-title { font-size: 18px; font-weight: 650; fill: #1c1915; }
+`;
+
+function shareBounds() {
+  const nodes = state.layout?.nodes || [];
+  if (!nodes.length) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const node of nodes) {
+    minX = Math.min(minX, node.x - node.w / 2);
+    maxX = Math.max(maxX, node.x + node.w / 2);
+    minY = Math.min(minY, node.y - node.h / 2);
+    maxY = Math.max(maxY, node.y + node.h / 2);
+  }
+  const pad = 36;
+  const title = 40;
+  return {
+    x: minX - pad,
+    y: minY - pad - title,
+    w: maxX - minX + pad * 2,
+    h: maxY - minY + pad * 2 + title,
+  };
+}
+
+function buildShareSvg() {
+  const bounds = shareBounds();
+  const source = $("#mindmap");
+  if (!bounds || !source) return null;
+  const svg = source.cloneNode(true);
+  const ns = "http://www.w3.org/2000/svg";
+  const pixelScale = Math.min(2, 1800 / bounds.w);
+  const width = Math.max(1, Math.round(bounds.w * pixelScale));
+  const height = Math.max(1, Math.round(bounds.h * pixelScale));
+  svg.setAttribute("xmlns", ns);
+  svg.setAttribute("viewBox", `${bounds.x} ${bounds.y} ${bounds.w} ${bounds.h}`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
+  svg.classList.toggle("is-focus", state.focusMode);
+  svg.querySelector("#viewport")?.removeAttribute("transform");
+
+  const style = document.createElementNS(ns, "style");
+  style.textContent = SHARE_STYLE;
+  const bg = document.createElementNS(ns, "rect");
+  bg.setAttribute("x", String(bounds.x));
+  bg.setAttribute("y", String(bounds.y));
+  bg.setAttribute("width", String(bounds.w));
+  bg.setAttribute("height", String(bounds.h));
+  bg.setAttribute("fill", "#f5f1e6");
+  const title = document.createElementNS(ns, "text");
+  title.setAttribute("class", "share-title");
+  title.setAttribute("x", String(bounds.x + 18));
+  title.setAttribute("y", String(bounds.y + 28));
+  title.textContent = `AimDay · ${state.day?.date || dateKey()}`;
+  svg.prepend(title);
+  svg.prepend(bg);
+  svg.prepend(style);
+  return { svg, width, height };
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not draw the map"));
+    img.src = url;
+  });
+}
+
+async function rasterizeMap() {
+  const built = buildShareSvg();
+  if (!built) return null;
+  const xml = new XMLSerializer().serializeToString(built.svg);
+  const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement("canvas");
+    canvas.width = built.width;
+    canvas.height = built.height;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f5f1e6";
+    ctx.fillRect(0, 0, built.width, built.height);
+    ctx.drawImage(img, 0, 0, built.width, built.height);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function pdfFromJpeg(jpegBytes, pxW, pxH) {
+  const pageW = 720;
+  const pageH = Math.max(72, Math.round(pageW * (pxH / pxW)));
+  const content = `q\n${pageW} 0 0 ${pageH} 0 0 cm\n/Im0 Do\nQ\n`;
+  const stream = new Uint8Array(jpegBytes.length + 1);
+  stream.set(jpegBytes, 0);
+  stream[jpegBytes.length] = 10;
+  const enc = new TextEncoder();
+  const parts = [];
+  let pos = 0;
+  const offsets = [0];
+  const push = (data) => {
+    const bytes = typeof data === "string" ? enc.encode(data) : data;
+    parts.push(bytes);
+    pos += bytes.length;
+  };
+  const obj = (n, body) => {
+    offsets[n] = pos;
+    push(`${n} 0 obj\n${body}endobj\n`);
+  };
+  push("%PDF-1.4\n");
+  obj(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
+  obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n");
+  obj(
+    3,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Contents 4 0 R /Resources << /XObject << /Im0 5 0 R >> >> >>\n`
+  );
+  obj(4, `<< /Length ${content.length} >>\nstream\n${content}endstream\n`);
+  offsets[5] = pos;
+  push(
+    `5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pxW} /Height ${pxH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${stream.length} >>\nstream\n`
+  );
+  push(stream);
+  push("\nendstream\nendobj\n");
+  const xref = pos;
+  push("xref\n0 6\n");
+  push("0000000000 65535 f \n");
+  for (let i = 1; i <= 5; i += 1) {
+    push(`${String(offsets[i]).padStart(10, "0")} 00000 n \n`);
+  }
+  push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: "application/pdf" });
+}
+
+async function downloadShare(kind) {
+  const pop = $("#sharePop");
+  if (pop) pop.hidden = true;
+  $("#shareMap")?.setAttribute("aria-expanded", "false");
+  const button = $("#shareMap");
+  const label = button?.textContent || "Share";
+  try {
+    const canvas = await rasterizeMap();
+    if (!canvas) return;
+    const stamp = state.day?.date || dateKey();
+    if (kind === "pdf") {
+      const jpeg = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+      if (!jpeg) throw new Error("empty jpeg");
+      const pdf = pdfFromJpeg(new Uint8Array(await jpeg.arrayBuffer()), canvas.width, canvas.height);
+      downloadBlob(pdf, `aimday-${stamp}.pdf`);
+    } else {
+      const png = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!png) throw new Error("empty png");
+      downloadBlob(png, `aimday-${stamp}.png`);
+    }
+  } catch {
+    if (button) {
+      button.textContent = "Try again";
+      setTimeout(() => {
+        button.textContent = label;
+      }, 1600);
+    }
+  }
 }
 
 init();
